@@ -14,6 +14,8 @@ EXPOSE 80
 
 ENV DEBIAN_FRONTEND noninteractive
 
+ENV INSTALL True
+
 ### install prereqs and other userful bits
 RUN apt-get -y update   && \
     apt-get -y install  curl \
