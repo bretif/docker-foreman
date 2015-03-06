@@ -1,5 +1,5 @@
-FROM ubuntu:trusty
-MAINTAINER Shaun Martin <shaun@samsite.ca>
+FROM phusion/baseimage:0.9.16
+MAINTAINER Bertrand Retif <bertrand@sudokeys.com>
 
 ### ports
 # puppet (via apache)
@@ -13,8 +13,6 @@ EXPOSE 443
 EXPOSE 80
 
 ENV DEBIAN_FRONTEND noninteractive
-
-ENV INSTALL True
 
 ### install prereqs and other userful bits
 RUN apt-get -y update   && \
@@ -34,22 +32,32 @@ RUN echo "deb http://deb.theforeman.org/ plugins 1.7" >> /etc/apt/sources.list.d
 RUN wget -q http://deb.theforeman.org/pubkey.gpg -O- | apt-key add -
 RUN apt-get -y update && apt-get -y install foreman-installer
 
-### install supervisord
-RUN apt-get -y install  python-pip
-RUN pip install         supervisor
+#Deploy scripts
+COPY scripts/deploy-foreman.sh /etc/my_init.d/10_deploy-foreman.sh
+RUN chmod +x /etc/my_init.d/10_deploy-foreman.sh
 
-### add supervisor configs
-ADD resources/etc/supervisord.conf /etc/supervisord.conf
-ADD resources/etc/supervisord.d /etc/supervisord.d
+# Start tftpd
+RUN mkdir /etc/service/tftpd
+COPY scripts/start_tftpd.sh /etc/service/tftpd/run
+RUN chmod +x /etc/service/tftpd/run
 
-### add run scripts
-ADD resources/start.sh /start.sh
-ADD resources/start_postgresql.sh /start_postgresql.sh
-ADD resources/start_foreman-proxy.sh /start_foreman-proxy.sh
+# Start foreman_proxy
+RUN mkdir /etc/service/foreman-proxy
+COPY scripts/start_foreman-proxy.sh /etc/service/foreman-proxy/run
+RUN chmod +x /etc/service/foreman-proxy/run
 
-### just in case
-RUN chown -R root:root /etc/supervisord*
-RUN mkdir -p /var/log/supervisord
-RUN chmod +x /start*.sh
+# Start puppet agent
+#RUN mkdir /etc/service/puppet-agent
+#COPY scripts/start_puppet_agent.sh /etc/service/puppet-agent/run
+#RUN chmod +x /etc/service/puppet-agent/run
 
-ENTRYPOINT /start.sh
+# Start apache
+RUN mkdir /etc/service/apache
+COPY scripts/start_apache.sh /etc/service/apache/run
+RUN chmod +x /etc/service/apache/run
+
+VOLUME [ "/etc/foreman", "/etc/foreman-proxy", "/etc/puppet", "/var/lib/puppet/ssl" ]
+
+# Baseimage init process
+ENTRYPOINT ["/sbin/my_init"]
+

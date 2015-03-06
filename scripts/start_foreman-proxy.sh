@@ -6,3 +6,4 @@ if [ -f /etc/foreman-proxy/settings.yml ]; then
 fi
 
 /usr/bin/ruby /usr/share/foreman-proxy/bin/smart-proxy
+
